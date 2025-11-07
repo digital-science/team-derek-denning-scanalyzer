@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanalyze Application</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the file drop zone */
+        #drop-zone {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        #drop-zone.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        /* Simple spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <div class="container mx-auto max-w-4xl p-4 md:p-8">
+        
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Scanalyze Application</h1>
+            <p class="text-lg text-gray-600">Upload an image of any data figure, chart, or table.</p>
+        </header>
+
+        <!-- API Key Input -->
+        <div class="mb-6">
+            <label for="api-key" class="block text-sm font-medium text-gray-700 mb-2">Google AI API Key</label>
+            <input type="password" id="api-key" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your API key here...">
+            <p class="text-xs text-gray-500 mt-1">Get your key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>. Your key stays in your browser.</p>
+        </div>
+
+        <!-- Main App Body -->
+        <div class="space-y-6">
+            
+            <!-- Upload Box -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Upload Image</h2>
+                
+                <!-- File Upload Zone -->
+                <div id="drop-zone" class="relative w-full p-6 text-center rounded-lg cursor-pointer">
+                    <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/png, image/jpeg, image/webp">
+                    
+                    <div id="upload-prompt" class="text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="mt-2 text-sm">
+                            <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs">PNG, JPG, or WEBP</p>
+                    </div>
+                </div>
+                
+                <!-- Image Preview -->
+                <div id="image-preview-container" class="mt-4 hidden">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Preview:</h3>
+                    <img id="image-preview" src="#" alt="Image preview" class="w-full rounded-lg border border-gray-200 shadow-sm">
+                    <button id="analyze-button" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+                        Analyze Image
+                    </button>
+                </div>
+            </div>
+
+            <!-- Analysis Box -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Analysis Insights</h2>
+                
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="flex-col items-center justify-center text-center text-gray-500 hidden">
+                    <div class="spinner mx-auto"></div>
+                    <p class="mt-2 text-sm">Analyzing your data... this may take a moment.</p>
+                </div>
+                
+                <!-- Error Message -->
+                <div id="error-message" class="hidden p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+                    <strong>Error:</strong> <span id="error-text"></span>
+                </div>
+
+                <!-- Initial Prompt -->
+                <div id="initial-prompt" class="text-gray-500 text-center p-8 border border-gray-200 rounded-lg">
+                    <p>Your analysis takeaways will appear here.</p>
+                </div>
+
+                <!-- Analysis Result -->
+                <div id="analysis-output" class="hidden space-y-4">
+                    <!-- The generated text will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Main Application Logic -->
+    <script>
+        // Get DOM elements
+        const apiKeyInput = document.getElementById('api-key');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeButton = document.getElementById('analyze-button');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const initialPrompt = document.getElementById('initial-prompt');
+        const analysisOutput = document.getElementById('analysis-output');
+
+        let fileAsBase64 = null;
+        let fileMimeType = null;
+
+        // --- Drag and Drop Handlers ---
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileChange(files[0]);
+            }
+        });
+
+        // Handle file selection (from click or drop)
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileChange(e.target.files[0]);
+            }
+        });
+
+        // --- File Processing ---
+        function handleFileChange(file) {
+            if (!file) return;
+
+            // Check file type
+            if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                showError('Invalid file type. Please upload a PNG, JPG, or WEBP.');
+                return;
+            }
+
+            fileMimeType = file.type;
+
+            // Use FileReader to convert image to Base64
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Show preview
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.classList.remove('hidden');
+                uploadPrompt.classList.add('hidden'); // Hide the initial prompt
+
+                // Store the Base64 data *without* the "data:image/png;base64," prefix
+                fileAsBase64 = e.target.result.split(',')[1];
+                
+                // Clear any previous results
+                resetAnalysisState();
+            };
+            reader.onerror = () => {
+                showError('Failed to read the file.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- API Call ---
+        analyzeButton.addEventListener('click', () => {
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!apiKey) {
+                showError('Please enter your Google AI API Key first.');
+                return;
+            }
+            if (!fileAsBase64) {
+                showError('Please upload an image file first.');
+                return;
+            }
+
+            callGeminiApi(apiKey);
+        });
+
+        async function callGeminiApi(apiKey) {
+            // Set UI to loading state
+            loadingSpinner.classList.remove('hidden');
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = 'Analyzing...';
+            resetAnalysisState(); // Clear previous errors/results
+
+            // This is the model that supports vision
+            const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+            // Define the prompt for the AI
+            const textPrompt = `You are an expert Data Analyst and Visualization Specialist. Your role is to act as a consultant who can immediately identify the most important insights from any data figure.
+When I upload an image (such as a graph, chart, table, or map), you must perform the following two tasks:
+
+Task 1. Core Analysis & Key Takeaways
+
+- Thoroughly analyze the data presented in the figure.
+- Identify the primary trends, significant patterns, correlations, anomalies, or key data points.
+- Summarize these findings as concise, easy-to-understand text statements (use bullet points). Focus on the "so what?"—what are the most critical takeaways?
+
+Task 2. Additional Web Context
+
+After your core analysis, conduct a brief web search to find relevant external information that potentially adds additional valuable context to the figure.
+This might include definitions of key terms or data labels or information about the time period shown, related news events, or broader funding/industry/economic trends that help explain the data.
+
+-------
+
+Your response must be formatted in the following way. However, this is just guidance, if you feel there is not enough to populate all insights or additional context, you do not need to populate them all.
+
+Key Takeaways
+[Insight 1: Describe the main trend or most significant finding.]
+[Insight 2: Point out another key pattern, comparison, or data point.]
+[Insight 3: Highlight any anomalies, surprising data, or a crucial summary figure.]
+
+Additional Context
+[Relevant fact, definition, or event found online that provides context.]
+[Another piece of relevant external information, if applicable.]`;
+
+            // Construct the API payload
+            const payload = {
+                contents: [
+                    {
+                        parts: [
+                            { text: textPrompt },
+                            {
+                                inlineData: {
+                                    mimeType: fileMimeType,
+                                    data: fileAsBase64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                // Add Google Search grounding tool
+                tools: [{ "google_search": {} }],
+                generationConfig: {
+                    temperature: 0.2, // Be more factual
+                    topK: 32,
+                    topP: 1,
+                    maxOutputTokens: 2048,
+                }
+            };
+            
+            // Exponential backoff setup
+            let response;
+            let retries = 0;
+            const maxRetries = 3;
+            let delay = 1000; // 1 second
+
+            while (retries < maxRetries) {
+                try {
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        break; // Success, exit loop
+                    } else if (response.status === 429) {
+                        // Throttled, wait and retry
+                        retries++;
+                        if (retries < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                        } else {
+                            throw new Error(`API is busy. Please try again later. (Status: ${response.status})`);
+                        }
+                    } else {
+                        // Other error
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `API request failed with status: ${response.status}`);
+                    }
+
+                } catch (error) {
+                    if (retries >= maxRetries - 1) {
+                        showError(error.message);
+                        resetLoadingState();
+                        return;
+                    }
+                     // Retry on network error or other fetch failures
+                    retries++;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+
+
+            try {
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0) {
+                    const analysisText = result.candidates[0].content.parts[0].text;
+                    // Basic Markdown to HTML conversion (for newlines)
+                    const formattedText = analysisText
+                        .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>') // Bold
+                        .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')         // Italic
+                        .replace(/`([^`]+)`/g, '<code>$1</code>')       // Inline code
+                        .replace(/\n\s*-\s/g, '<br>• ')                  // List items
+                        .replace(/\n/g, '<br>');                         // Newlines
+                    
+                    analysisOutput.innerHTML = formattedText;
+                    analysisOutput.classList.remove('hidden');
+                    initialPrompt.classList.add('hidden');
+                } else {
+                    // This can happen if the content is blocked by safety settings
+                    let safetyMessage = "No analysis was returned.";
+                    if (result.promptFeedback && result.promptFeedback.blockReason) {
+                        safetyMessage = `Content was blocked. Reason: ${result.promptFeedback.blockReason}`;
+                    }
+                    showError(safetyMessage);
+                }
+
+            } catch (error) {
+                showError(`Failed to process the AI's response: ${error.message}`);
+            } finally {
+                resetLoadingState();
+            }
+        }
+
+        // --- UI Helper Functions ---
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+            initialPrompt.classList.add('hidden');
+            analysisOutput.classList.add('hidden');
+        }
+
+        function resetAnalysisState() {
+            // Clear errors and results
+            errorMessage.classList.add('hidden');
+            analysisOutput.classList.add('hidden');
+            analysisOutput.innerHTML = '';
+            // Show the initial "Your analysis will appear here" prompt
+            if (loadingSpinner.classList.contains('hidden')) {
+                initialPrompt.classList.remove('hidden');
+            }
+        }
+
+        function resetLoadingState() {
+            loadingSpinner.classList.add('hidden');
+            analyzeButton.disabled = false;
+            analyzeButton.textContent = 'Analyze Image';
+        }
+    </script>
+
+</body>
+</html>
