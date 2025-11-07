@@ -347,13 +347,31 @@ Additional Context
                 
                 if (result.candidates && result.candidates.length > 0) {
                     const analysisText = result.candidates[0].content.parts[0].text;
-                    // Basic Markdown to HTML conversion (for newlines)
-                    const formattedText = analysisText
-                        .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>') // Bold
-                        .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')         // Italic
-                        .replace(/`([^`]+)`/g, '<code>$1</code>')       // Inline code
-                        .replace(/\n\s*-\s/g, '<br>• ')                  // List items
-                        .replace(/\n/g, '<br>');                         // Newlines
+                    
+                    // --- Improved Markdown to HTML conversion ---
+                    let formattedText = analysisText;
+
+                    // 1. Headers: ## becomes bold and bigger
+                    // Added: first:mt-0 to prevent margin on the very first element
+                    formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h3 class="text-xl font-semibold mb-3 mt-4 first:mt-0">$1</h3>');
+                    
+                    // 2. Lists: Handle bullet points `* Item`
+                    // This will correctly capture items that are also bolded (like `* *Item*`)
+                    formattedText = formattedText.replace(/\n\*\s(.*?)(?=\n|$)/g, '<li class="ml-5 list-disc">$1</li>');
+
+                    // 3. Bolding: Handle `*Item*` (which the user sees as bold in the screenshot)
+                    formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+                    // 4. Wrap <li> tags in <ul>
+                    // This finds all <li>...</li> blocks and wraps them in a <ul>
+                    formattedText = formattedText.replace(/(<li class="ml-5 list-disc">.*?<\/li>)/gs, '<ul>$1</ul>');
+                    
+                    // 5. Clean up extra newlines, but preserve those between blocks
+                    formattedText = formattedText.replace(/\n/g, '<br>');
+                    formattedText = formattedText.replace(/<br><br>/g, '<br>'); // Consolidate breaks
+                    formattedText = formattedText.replace(/<\/ul><br>/g, '</ul>'); // Remove break after list
+                    formattedText = formattedText.replace(/<br><ul>/g, '<ul>'); // Remove break before list
+                    // --- End of new conversion logic ---
                     
                     analysisOutput.innerHTML = formattedText;
                     analysisOutput.classList.remove('hidden');
