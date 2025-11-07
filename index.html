@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanalyze Application</title>
-    <!-- 1. Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 1. Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for the file drop zone */
         #drop-zone {
@@ -34,28 +33,23 @@
 
     <div class="container mx-auto max-w-4xl p-4 md:p-8">
         
-        <!-- Header -->
-        <header class="mb-8">
+        <!-- Header --><header class="mb-8">
             <h1 class="text-4xl font-bold text-gray-800">Scanalyze Application</h1>
             <p class="text-lg text-gray-600">Upload an image of any data figure, chart, or table.</p>
         </header>
 
-        <!-- API Key Input -->
-        <div class="mb-6">
+        <!-- API Key Input --><div class="mb-6">
             <label for="api-key" class="block text-sm font-medium text-gray-700 mb-2">Google AI API Key</label>
             <input type="password" id="api-key" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your API key here...">
             <p class="text-xs text-gray-500 mt-1">Get your key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>. Your key stays in your browser.</p>
         </div>
 
-        <!-- Main App Body -->
-        <div class="space-y-6">
+        <!-- Main App Body --><div class="space-y-6">
             
-            <!-- Upload Box -->
-            <div class="bg-white p-6 rounded-lg shadow-lg">
+            <!-- Upload Box --><div class="bg-white p-6 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-gray-700 mb-4">Upload Image</h2>
                 
-                <!-- File Upload Zone -->
-                <div id="drop-zone" class="relative w-full p-6 text-center rounded-lg cursor-pointer">
+                <!-- File Upload Zone --><div id="drop-zone" class="relative w-full p-6 text-center rounded-lg cursor-pointer">
                     <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/png, image/jpeg, image/webp">
                     
                     <div id="upload-prompt" class="text-gray-500">
@@ -69,8 +63,7 @@
                     </div>
                 </div>
                 
-                <!-- Image Preview -->
-                <div id="image-preview-container" class="mt-4 hidden">
+                <!-- Image Preview --><div id="image-preview-container" class="mt-4 hidden">
                     <h3 class="text-sm font-medium text-gray-700 mb-2">Preview:</h3>
                     <img id="image-preview" src="#" alt="Image preview" class="w-full rounded-lg border border-gray-200 shadow-sm">
                     <div class="mt-4 flex space-x-3">
@@ -84,36 +77,29 @@
                 </div>
             </div>
 
-            <!-- Analysis Box -->
-            <div class="bg-white p-6 rounded-lg shadow-lg">
+            <!-- Analysis Box --><div class="bg-white p-6 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-gray-700 mb-4">Analysis Insights</h2>
                 
-                <!-- Loading Spinner -->
-                <div id="loading-spinner" class="flex-col items-center justify-center text-center text-gray-500 hidden">
+                <!-- Loading Spinner --><div id="loading-spinner" class="flex-col items-center justify-center text-center text-gray-500 hidden">
                     <div class="spinner mx-auto"></div>
                     <p class="mt-2 text-sm">Analyzing your data... this may take a moment.</p>
                 </div>
                 
-                <!-- Error Message -->
-                <div id="error-message" class="hidden p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+                <!-- Error Message --><div id="error-message" class="hidden p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
                     <strong>Error:</strong> <span id="error-text"></span>
                 </div>
 
-                <!-- Initial Prompt -->
-                <div id="initial-prompt" class="text-gray-500 text-center p-8 border border-gray-200 rounded-lg">
+                <!-- Initial Prompt --><div id="initial-prompt" class="text-gray-500 text-center p-8 border border-gray-200 rounded-lg">
                     <p>Your analysis takeaways will appear here.</p>
                 </div>
 
-                <!-- Analysis Result -->
-                <div id="analysis-output" class="hidden space-y-4">
-                    <!-- The generated text will be inserted here -->
-                </div>
+                <!-- Analysis Result --><div id="analysis-output" class="hidden space-y-4">
+                    <!-- The generated text will be inserted here --></div>
             </div>
         </div>
     </div>
 
-    <!-- 2. Main Application Logic -->
-    <script>
+    <!-- 2. Main Application Logic --><script>
         // Get DOM elements
         const apiKeyInput = document.getElementById('api-key');
         const dropZone = document.getElementById('drop-zone');
@@ -351,26 +337,40 @@ Additional Context
                     // --- Improved Markdown to HTML conversion ---
                     let formattedText = analysisText;
 
-                    // 1. Headers: ## becomes bold and bigger
+                    // 1. Explicitly bold "Key Takeaways" and "Additional Context" if they appear as plain text headings
+                    formattedText = formattedText.replace(/^(Key Takeaways)(?=\n|$)/gm, '<h3><strong>Key Takeaways</strong></h3>');
+                    formattedText = formattedText.replace(/^(Additional Context)(?=\n|$)/gm, '<h3><strong>Additional Context</strong></h3>');
+
+                    // 2. Headers: ## becomes bold and bigger (but leave h3 for the explicit ones above)
                     // Added: first:mt-0 to prevent margin on the very first element
                     formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h3 class="text-xl font-semibold mb-3 mt-4 first:mt-0">$1</h3>');
                     
-                    // 2. Lists: Handle bullet points `* Item`
-                    // This will correctly capture items that are also bolded (like `* *Item*`)
-                    formattedText = formattedText.replace(/\n\*\s(.*?)(?=\n|$)/g, '<li class="ml-5 list-disc">$1</li>');
-
-                    // 3. Bolding: Handle `*Item*` (which the user sees as bold in the screenshot)
+                    // 3. Bolding: Handle *Item* for inline bolding
                     formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
 
-                    // 4. Wrap <li> tags in <ul>
-                    // This finds all <li>...</li> blocks and wraps them in a <ul>
-                    formattedText = formattedText.replace(/(<li class="ml-5 list-disc">.*?<\/li>)/gs, '<ul>$1</ul>');
-                    
-                    // 5. Clean up extra newlines, but preserve those between blocks
-                    formattedText = formattedText.replace(/\n/g, '<br>');
-                    formattedText = formattedText.replace(/<br><br>/g, '<br>'); // Consolidate breaks
-                    formattedText = formattedText.replace(/<\/ul><br>/g, '</ul>'); // Remove break after list
-                    formattedText = formattedText.replace(/<br><ul>/g, '<ul>'); // Remove break before list
+                    // 4. Lists: Convert lines starting with '*' to list items
+                    // This captures multiple list items and ensures they are properly formatted.
+                    const listRegex = /(\n\s*-\s.*?(?=\n\s*-\s|\n\s*Additional Context|\n\s*Key Takeaways|$))/gs;
+                    formattedText = formattedText.replace(listRegex, (match) => {
+                        const items = match.split('\n- ').filter(item => item.trim() !== '');
+                        if (items.length === 0) return '';
+                        const ulContent = items.map(item => `<li class="ml-5 list-disc">${item.replace(/^\s*-\s*/, '')}</li>`).join('');
+                        return `<ul class="list-disc pl-5 mt-2 mb-4">${ulContent}</ul>`;
+                    });
+
+                    // 5. General paragraph breaks for remaining text
+                    formattedText = formattedText.split('\n\n').map(paragraph => {
+                        // Only wrap if it's not already a heading or list
+                        if (!paragraph.startsWith('<h3') && !paragraph.startsWith('<ul')) {
+                            return `<p class="mb-2">${paragraph}</p>`;
+                        }
+                        return paragraph;
+                    }).join('');
+
+                    // 6. Clean up excessive line breaks
+                    formattedText = formattedText.replace(/<br>\s*<br>/g, '<br>'); // Remove extra <br> tags
+                    formattedText = formattedText.replace(/<p><\/p>/g, ''); // Remove empty paragraphs
+
                     // --- End of new conversion logic ---
                     
                     analysisOutput.innerHTML = formattedText;
@@ -420,3 +420,11 @@ Additional Context
 
 </body>
 </html>
+```
+
+**Key Changes:**
+
+1.  **Explicit Header Bolding:**
+    ```javascript
+    formattedText = formattedText.replace(/^(Key Takeaways)(?=\n|$)/gm, '<h3><strong>Key Takeaways</strong></h3>');
+    formattedText = formattedText.replace(/^(Additional Context)(?=\n|$)/gm, '<h3><strong>Additional Context</strong></h3>');
