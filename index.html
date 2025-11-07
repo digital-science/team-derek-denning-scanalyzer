@@ -236,7 +236,7 @@ Task 1. Core Analysis & Key Takeaways
 
 - Thoroughly analyze the data presented in the figure.
 - Identify the primary trends, significant patterns, correlations, anomalies, or key data points.
-- Summarize these findings as concise, easy-to-understand text statements (use bullet points). Focus on the "so what?"—what are the most critical takeaways?
+- Summarize these findings as concise, easy-to-understand text statements (use bullet points with a single '*' or '-'). Focus on the "so what?"—what are the most critical takeaways?
 
 Task 2. Additional Web Context
 
@@ -337,40 +337,49 @@ Additional Context
                     // --- Improved Markdown to HTML conversion ---
                     let formattedText = analysisText;
 
-                    // 1. Explicitly bold "Key Takeaways" and "Additional Context" if they appear as plain text headings
-                    formattedText = formattedText.replace(/^(Key Takeaways)(?=\n|$)/gm, '<h3><strong>Key Takeaways</strong></h3>');
-                    formattedText = formattedText.replace(/^(Additional Context)(?=\n|$)/gm, '<h3><strong>Additional Context</strong></h3>');
+                    // 1. Explicitly find and format the main headings
+                    // Use 'gm' (global, multiline) to find at the start of any line
+                    // Add margin-top for spacing (mt-4)
+                    formattedText = formattedText.replace(/^Key Takeaways/gm, '<h3 class="text-xl font-semibold mt-4">Key Takeaways</h3>');
+                    formattedText = formattedText.replace(/^Additional Context/gm, '<h3 class="text-xl font-semibold mt-4">Additional Context</h3>');
 
-                    // 2. Headers: ## becomes bold and bigger (but leave h3 for the explicit ones above)
-                    // Added: first:mt-0 to prevent margin on the very first element
-                    formattedText = formattedText.replace(/## (.*?)(\n|$)/g, '<h3 class="text-xl font-semibold mb-3 mt-4 first:mt-0">$1</h3>');
-                    
-                    // 3. Bolding: Handle *Item* for inline bolding
-                    formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+                    // 2. Format any other markdown headers (e.g., ##)
+                    formattedText = formattedText.replace(/^## (.*?)(\n|$)/gm, '<h3 class="text-xl font-semibold mt-4">$1</h3>');
 
-                    // 4. Lists: Convert lines starting with '*' to list items
-                    // This captures multiple list items and ensures they are properly formatted.
-                    const listRegex = /(\n\s*-\s.*?(?=\n\s*-\s|\n\s*Additional Context|\n\s*Key Takeaways|$))/gs;
+                    // 3. Format lists (handles both * and -)
+                    // This regex finds blocks of list items
+                    const listRegex = /(?:(?:\n\s*[-*]\s.*)+)/g;
                     formattedText = formattedText.replace(listRegex, (match) => {
-                        const items = match.split('\n- ').filter(item => item.trim() !== '');
+                        // Split the match into individual list items
+                        const items = match.trim().split(/\n\s*[-*]\s/);
+                        // The first item will be empty (from the split), so remove it
+                        items.shift(); 
+                        
                         if (items.length === 0) return '';
-                        const ulContent = items.map(item => `<li class="ml-5 list-disc">${item.replace(/^\s*-\s*/, '')}</li>`).join('');
+                        
+                        // Wrap each item in <li> tags
+                        const ulContent = items.map(item => `<li class="ml-5 list-disc">${item.trim()}</li>`).join('');
                         return `<ul class="list-disc pl-5 mt-2 mb-4">${ulContent}</ul>`;
                     });
 
-                    // 5. General paragraph breaks for remaining text
-                    formattedText = formattedText.split('\n\n').map(paragraph => {
-                        // Only wrap if it's not already a heading or list
-                        if (!paragraph.startsWith('<h3') && !paragraph.startsWith('<ul')) {
-                            return `<p class="mb-2">${paragraph}</p>`;
+                    // 4. Format bold text (handles both **text** and *text*)
+                    // Run double-asterisk first, then single-asterisk
+                    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    formattedText = formattedText.replace(/\*(.*?)\*/g, '<strong>$1</strong>'); // Treat single * as bold too, as seen in AI output
+
+                    // 5. Wrap remaining text blocks (separated by newlines) in <p> tags
+                    // This avoids wrapping headings and lists which are already HTML
+                    formattedText = formattedText.split('\n').map(line => {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.length === 0) return ''; // Skip empty lines
+                        if (trimmedLine.startsWith('<h3') || trimmedLine.startsWith('<ul') || trimmedLine.startsWith('<li') || trimmedLine.startsWith('</ul')) {
+                            return line; // It's already HTML
                         }
-                        return paragraph;
+                        return `<p class="mb-2">${line}</p>`; // Wrap in paragraph
                     }).join('');
 
-                    // 6. Clean up excessive line breaks
-                    formattedText = formattedText.replace(/<br>\s*<br>/g, '<br>'); // Remove extra <br> tags
-                    formattedText = formattedText.replace(/<p><\/p>/g, ''); // Remove empty paragraphs
-
+                    // 6. Clean up: remove empty paragraphs
+                    formattedText = formattedText.replace(/<p class="mb-2"><\/p>/g, '');
                     // --- End of new conversion logic ---
                     
                     analysisOutput.innerHTML = formattedText;
@@ -420,11 +429,3 @@ Additional Context
 
 </body>
 </html>
-```
-
-**Key Changes:**
-
-1.  **Explicit Header Bolding:**
-    ```javascript
-    formattedText = formattedText.replace(/^(Key Takeaways)(?=\n|$)/gm, '<h3><strong>Key Takeaways</strong></h3>');
-    formattedText = formattedText.replace(/^(Additional Context)(?=\n|$)/gm, '<h3><strong>Additional Context</strong></h3>');
